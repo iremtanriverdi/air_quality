@@ -1,0 +1,170 @@
+---
+title: "Untitled"
+author: "Irem TANRIVERDI"
+date: "2025-03-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+### GPBoost
+```{r}
+library(gpboost)
+library(caret)
+library(lares)
+
+X_train <- as.matrix(train_df[, c("temperature_2m_C_y", "wind_speed_10m_ms", "surface_pressure_hPa_y",
+                                  "total_precipitation_mm", "total_column_ozone_y", "surface_solar_radiation_downward_Wm2",
+                                  "sea_salt_aerosol_1", "organic_matter_aerosol_2", "nitric_oxide", "methane",
+                                  "specific_humidity_kgkg", "boundary_layer_height_m", "mean_sea_level_pressure_hPa",
+                                  "wind_u_component_10m_ms", "wind_v_component_10m_ms", "year", "month",
+                                  "low_cloud_cover_percent", "evaporation_mm", "ethane", "formaldehyde",
+                                  "potential_vorticity_Km2s", "relative_humidity_percent", "vertical_velocity_Pas")])
+
+y_train <- as.vector(train_df$PCA_AQI)
+
+# 📌 Gaussian Process Model
+gp_model <- fitGPModel(group_data = train_df[, c("year")], y = y_train, X = X_train, likelihood = "gaussian")
+summary(gp_model)
+```
+
+```{r}
+start_time <- proc.time()
+dtrain <- gpb.Dataset(X_train, label = y_train)
+data_file <- tempfile(fileext = ".data")
+gpb.Dataset.save(dtrain, data_file)
+dtrain <- gpb.Dataset(data_file)
+gpb.Dataset.construct(dtrain)
+end_time <- proc.time()
+print(end_time - start_time)
+```
+
+
+
+
+```{r}
+# 📌 Model Param
+params <- list(
+  objective = "regression", 
+  learning_rate = 0.03,
+  max_depth = 100,
+  min_data_in_leaf = 5,
+  min_sum_hessian_in_leaf = 3
+)
+
+model <- gpb.train(
+  params = params,
+  data = dtrain,
+  nrounds = 200
+)
+
+tree_imp <- gpb.importance(model, percentage = TRUE)
+gpb.plot.importance(tree_imp, top_n = 14L, measure = "Cover", left_margin = 10L, cex = 0.75)
+
+```
+
+
+```{r}
+X_test <- as.matrix(test_df[, c("temperature_2m_C_y", "wind_speed_10m_ms", "surface_pressure_hPa_y",
+                                "total_precipitation_mm", "total_column_ozone_y", "surface_solar_radiation_downward_Wm2",
+                                "sea_salt_aerosol_1", "organic_matter_aerosol_2", "nitric_oxide", "methane",
+                                "specific_humidity_kgkg", "boundary_layer_height_m", "mean_sea_level_pressure_hPa",
+                                "wind_u_component_10m_ms", "wind_v_component_10m_ms", "year", "month",
+                                "low_cloud_cover_percent", "evaporation_mm", "ethane", "formaldehyde",
+                                "potential_vorticity_Km2s", "relative_humidity_percent", "vertical_velocity_Pas")])
+
+predictions <- predict(model, data = X_test, group_data_pred = test_df[, c("year")], predict_var = FALSE, pred_latent = FALSE)
+mae <- mean(abs(predictions - test_df$PCA_AQI))
+rmse <- sqrt(mean((predictions - test_df$PCA_AQI)^2))
+r2 <- cor(predictions, test_df$PCA_AQI)^2
+
+cat("Test MAE:", mae, "\n")
+cat("Test RMSE:", rmse, "\n")
+cat("Test R² Score:", r2, "\n")
+```
+
+
+
+### SAEForest
+
+```{r}
+# Define the dependent variable
+y <- train_df$PCA_AQI  # Target variable
+y <- as.vector(y)
+# Fixed effects: Select relevant predictors
+x <- train_df[, c("temperature_2m_C_y", "wind_speed_10m_ms", "surface_pressure_hPa_y", 
+                       "total_precipitation_mm", "total_column_ozone_y", 
+                       "surface_solar_radiation_downward_Wm2", "sea_salt_aerosol_1", 
+                       "organic_matter_aerosol_2", "nitric_oxide", "methane", 
+                       "specific_humidity_kgkg", "boundary_layer_height_m", 
+                       "mean_sea_level_pressure_hPa", "wind_u_component_10m_ms", 
+                       "wind_v_component_10m_ms", "year", "month", 
+                       "low_cloud_cover_percent", "evaporation_mm", "ethane", 
+                       "formaldehyde", "potential_vorticity_Km2s", 
+                       "relative_humidity_percent", "vertical_velocity_Pas")]
+
+
+test_df$Country <- as.factor(test_df$Country)
+
+model1 <- SAEforest_model(Y = y, X = x, dName = "Country", smp_data = train_df, pop_data = train_df, B = 100,
+B_adj = 100,
+B_MC = 100)
+summary(model1)
+```
+
+```{r}
+library(ggplot2)
+plot(model1, num_features = 24, col = "darkgreen",
+   fill = "darkgreen", alpha = 0.8,horizontal = TRUE,
+   gg_theme = theme_minimal(), lsize = 1.5, lty = "solid",
+   grid_row = 2, out_list = FALSE,
+   pdp_plot = TRUE)
+
+```
+
+
+```{r}
+# make Predictions on Test Set
+y_pred_test <- predict(model1$MERFmodel$Forest, data = test_df)$predictions
+
+# extract True Values
+y_test <- test_df$PCA_AQI
+```
+
+```{r}
+library(SAEforest)
+library(Metrics)  # For MAE and RMSE
+library(stats)
+
+# Calculate MAE
+mae <- mae(y_test, y_pred_test)
+
+# Calculate RMSE
+rmse <- rmse(y_test, y_pred_test)
+
+# Calculate Adjusted R²
+n <- length(y_test)
+p <- ncol(test_df[, c("temperature_2m_C_y", "wind_speed_10m_ms")])  # Number of predictors
+r2 <- cor(y_test, y_pred_test, use = "complete.obs")^2  # Handle missing values
+adj_r2 <- 1 - (1 - r2) * ((n - 1) / (n - p - 1))
+
+# Print Model Evaluation Metrics
+cat("Model Evaluation Metrics for Test Set:\n")
+cat("MAE:", round(mae, 8), "\n")
+cat("RMSE:", round(rmse, 8), "\n")
+cat("Adjusted R²:", round(adj_r2, 4), "\n")
+
+# plot Predictions vs Actual Values
+library(ggplot2)
+ggplot(data = test_df, aes(x = y_test, y = y_pred_test)) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = 0, slope = 1, color = "red") +
+  labs(title = "SAEforest_model Predictions vs Actual PCA_AQI",
+       x = "Actual PCA_AQI",
+       y = "Predicted PCA_AQI")
+
+```
