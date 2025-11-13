@@ -26,7 +26,7 @@ https://doi.org/10.1016/j.envsoft.2025.106746
 
 ---
 
-## ⭐ Key Features
+## Key Features
 
 - **Proposed by our team** as the first diffusion-based framework for longitudinal environmental data  
 - **Interpretable deep learning**: mixed-effects structure provides statistical clarity, diffusion layers provide DL flexibility  
