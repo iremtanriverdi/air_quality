@@ -1,6 +1,8 @@
 #  Hybrid Mixed-Effect Diffusion Model (H-MED)
 ## A proposed interpretable deep learning framework integrating mixed-effects regression with diffusion-based modeling
 
+<img width="2656" height="1062" alt="graphical_abstract" src="https://github.com/user-attachments/assets/2804f7de-373a-445f-a23c-e6b4288a1bd1" />
+
 **H-MED** (Hybrid Mixed-Effect Diffusion Model) is a **newly proposed** architecture developed by our team to address the challenges of modeling large-scale **longitudinal air quality data**. Unlike traditional deep learning approaches that behave as black boxes, **H-MED is explicitly designed to be both powerful and interpretable**.
 
 H-MED integrates:
@@ -19,7 +21,8 @@ The method is introduced in:
 **Tanriverdi, I. & Yozgatligil, C. (2025). _Hybrid Mixed-Effect Diffusion model (H-MED) for longitudinal air quality analysis_. Environmental Modelling & Software.**  
 https://doi.org/10.1016/j.envsoft.2025.106746
 
-[graphical_abstract.pdf](https://github.com/user-attachments/files/23520985/graphical_abstract.pdf)
+
+
 
 ---
 
