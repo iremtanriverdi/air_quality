@@ -3,7 +3,7 @@
 
 <img width="2656" height="1062" alt="graphical_abstract" src="https://github.com/user-attachments/assets/2804f7de-373a-445f-a23c-e6b4288a1bd1" />
 
-**H-MED** (Hybrid Mixed-Effect Diffusion Model) is a **newly proposed** architecture developed by our team to address the challenges of modeling large-scale **longitudinal air quality data**. Unlike traditional deep learning approaches that behave as black boxes, **H-MED is explicitly designed to be both powerful and interpretable**.
+**H-MED** (Hybrid Mixed-Effect Diffusion Model) is a **newly proposed** architecture to address the challenges of modeling large-scale **longitudinal air quality data**. Unlike traditional deep learning approaches that behave as black boxes, **H-MED is explicitly designed to be both powerful and interpretable**.
 
 H-MED integrates:
 
